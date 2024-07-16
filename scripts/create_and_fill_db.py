@@ -3,14 +3,11 @@ from faker import Faker
 import random
 from datetime import datetime
 
-# Создание базы данных и подключение к ней
 conn = sqlite3.connect('university.db')
 cursor = conn.cursor()
 
-# Включение поддержки внешних ключей
 cursor.execute('PRAGMA foreign_keys = ON')
 
-# Создание таблиц с внешними ключами
 cursor.execute('''
     CREATE TABLE IF NOT EXISTS groups (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -63,31 +60,26 @@ cursor.execute('''
     )
 ''')
 
-# Используем Faker для заполнения данных
+
 fake = Faker()
 
-# Заполнение таблицы групп
 groups = ['Group A', 'Group B', 'Group C']
 for group in groups:
     cursor.execute('INSERT INTO groups (name) VALUES (?)', (group,))
 
-# Заполнение таблицы преподавателей
 teachers = [fake.name() for _ in range(5)]
 for teacher in teachers:
     cursor.execute('INSERT INTO teachers (name) VALUES (?)', (teacher,))
 
-# Заполнение таблицы предметов
 subjects = ['Math', 'Physics', 'Chemistry', 'Biology', 'History', 'Geography', 'Literature', 'Art']
 teacher_ids = [row[0] for row in cursor.execute('SELECT id FROM teachers')]
 for subject in subjects:
     cursor.execute('INSERT INTO subjects (name, teacher_id) VALUES (?, ?)', (subject, random.choice(teacher_ids)))
 
-# Заполнение таблицы студентов
 group_ids = [row[0] for row in cursor.execute('SELECT id FROM groups')]
 for _ in range(50):
     cursor.execute('INSERT INTO students (name, group_id) VALUES (?, ?)', (fake.name(), random.choice(group_ids)))
 
-# Заполнение таблицы оценок
 student_ids = [row[0] for row in cursor.execute('SELECT id FROM students')]
 subject_ids = [row[0] for row in cursor.execute('SELECT id FROM subjects')]
 for student_id in student_ids:
