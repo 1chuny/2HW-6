@@ -7,34 +7,43 @@ from datetime import datetime
 conn = sqlite3.connect('university.db')
 cursor = conn.cursor()
 
-# Создание таблиц
+# Включение поддержки внешних ключей
+cursor.execute('PRAGMA foreign_keys = ON')
+
+# Создание таблиц с внешними ключами
 cursor.execute('''
-    CREATE TABLE IF NOT EXISTS students (
+    CREATE TABLE IF NOT EXISTS groups (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT,
-        group_id INTEGER
+        name TEXT NOT NULL
     )
 ''')
 
 cursor.execute('''
-    CREATE TABLE IF NOT EXISTS groups (
+    CREATE TABLE IF NOT EXISTS students (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT
+        name TEXT NOT NULL,
+        group_id INTEGER,
+        FOREIGN KEY (group_id) REFERENCES groups(id)
+            ON DELETE SET NULL
+            ON UPDATE CASCADE
     )
 ''')
 
 cursor.execute('''
     CREATE TABLE IF NOT EXISTS teachers (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT
+        name TEXT NOT NULL
     )
 ''')
 
 cursor.execute('''
     CREATE TABLE IF NOT EXISTS subjects (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT,
-        teacher_id INTEGER
+        name TEXT NOT NULL,
+        teacher_id INTEGER,
+        FOREIGN KEY (teacher_id) REFERENCES teachers(id)
+            ON DELETE SET NULL
+            ON UPDATE CASCADE
     )
 ''')
 
@@ -43,8 +52,14 @@ cursor.execute('''
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         student_id INTEGER,
         subject_id INTEGER,
-        grade INTEGER,
-        date TEXT
+        grade INTEGER NOT NULL,
+        date TEXT NOT NULL,
+        FOREIGN KEY (student_id) REFERENCES students(id)
+            ON DELETE CASCADE
+            ON UPDATE CASCADE,
+        FOREIGN KEY (subject_id) REFERENCES subjects(id)
+            ON DELETE CASCADE
+            ON UPDATE CASCADE
     )
 ''')
 
@@ -63,16 +78,20 @@ for teacher in teachers:
 
 # Заполнение таблицы предметов
 subjects = ['Math', 'Physics', 'Chemistry', 'Biology', 'History', 'Geography', 'Literature', 'Art']
+teacher_ids = [row[0] for row in cursor.execute('SELECT id FROM teachers')]
 for subject in subjects:
-    cursor.execute('INSERT INTO subjects (name, teacher_id) VALUES (?, ?)', (subject, random.choice(range(1, 6))))
+    cursor.execute('INSERT INTO subjects (name, teacher_id) VALUES (?, ?)', (subject, random.choice(teacher_ids)))
 
 # Заполнение таблицы студентов
+group_ids = [row[0] for row in cursor.execute('SELECT id FROM groups')]
 for _ in range(50):
-    cursor.execute('INSERT INTO students (name, group_id) VALUES (?, ?)', (fake.name(), random.choice(range(1, 4))))
+    cursor.execute('INSERT INTO students (name, group_id) VALUES (?, ?)', (fake.name(), random.choice(group_ids)))
 
 # Заполнение таблицы оценок
-for student_id in range(1, 51):
-    for subject_id in range(1, 9):
+student_ids = [row[0] for row in cursor.execute('SELECT id FROM students')]
+subject_ids = [row[0] for row in cursor.execute('SELECT id FROM subjects')]
+for student_id in student_ids:
+    for subject_id in subject_ids:
         for _ in range(random.randint(10, 20)):
             date_str = fake.date_this_year().strftime('%Y-%m-%d')
             cursor.execute('INSERT INTO grades (student_id, subject_id, grade, date) VALUES (?, ?, ?, ?)', 
